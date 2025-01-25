@@ -22,3 +22,12 @@ A to-do item should include a description and a status of "not started", "starte
 5) Concurrency
 - Use the Actor/Communicating Sequential Processes (CSP) pattern to support concurrent reads and concurrent safe write
 - Use Parallel tests to validate that the solution is concurrent safe
+
+
+# CLI operations
+1) Add new item
+- go run main.go -action=add -id=1 -desc="new Item" -status="not started"
+2) Update item
+- go run main.go -action=update -id=1 -desc="new Item" -status="started"
+3) Remove item 
+- go run main.go -action=remove -id=0
