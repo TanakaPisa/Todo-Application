@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-type todoItem struct {
+type TodoItem struct {
 	ID     int    `json:"id"`
 	Desc   string `json:"desc"`
 	Status string `json:"status"`
 }
 
-var todoItems = []todoItem{}
+var TodoItems = []TodoItem{}
 var fileName = "list.json"
 
 type contextKey string
@@ -56,7 +56,7 @@ func Main() {
 	}
 
 	if content != nil {
-		json.Unmarshal(content, &todoItems)
+		json.Unmarshal(content, &TodoItems)
 	}
 	
 	// - Create a command line application that uses flags to accept a to-do item adds it to an empty list of to-do items and prints the list to console
@@ -70,7 +70,7 @@ func Main() {
 	flag.StringVar(&status, "status", "notStarted", "This is the current status for the task")
 	flag.Parse()
 
-	var item = todoItem{id, desc, status}
+	var item = TodoItem{id, desc, status}
 	fmt.Println(item)
 
 	//Operations
@@ -78,15 +78,15 @@ func Main() {
 	case action == "add":
 		addItem(item)
 	case action == "remove":
-		removeItem(todoItems, item)
+		removeItem(TodoItems, item)
 	case action == "update":
-		updateItem(todoItems, item)
+		updateItem(TodoItems, item)
 	default:
 		return
 	}
 
 	// - After printing the list of to-do items, save them to a file on disk
-	jsonBytes, err := json.Marshal(todoItems)
+	jsonBytes, err := json.Marshal(TodoItems)
 	if err != nil {
 		logger.Error("Error marshalling json", slog.String("file", fileName), slog.Any("error", err))
 		return
@@ -95,26 +95,26 @@ func Main() {
 	logger.Info("File saved successfully", slog.String("file", fileName))
 }
 
-func addItem(item todoItem) {
-	todoItems = append(todoItems, item)
+func addItem(item TodoItem) {
+	TodoItems = append(TodoItems, item)
 }
 
-func removeItem(slice []todoItem, item todoItem) {
-	result := []todoItem{}
+func removeItem(slice []TodoItem, item TodoItem) {
+	result := []TodoItem{}
 	for _, v := range slice {
 		if v.ID != item.ID {
 			result = append(result, v)
 		}
 	}
-	todoItems = result
+	TodoItems = result
 }
 
-func updateItem(result []todoItem, item todoItem) {
+func updateItem(result []TodoItem, item TodoItem) {
 	for i, v := range result {
 		if v.ID == item.ID {
 			result[i].Desc = item.Desc
 			result[i].Status = item.Status
 		}
 	}
-	todoItems = result;
+	TodoItems = result;
 }
