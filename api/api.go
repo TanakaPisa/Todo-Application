@@ -23,6 +23,8 @@ type TodoItemId struct {
 
 var todoItems = []TodoItem{}
 
+var ctx context.Context
+
 func Main() {
 	loadTodosFromFile()
 	mux := http.NewServeMux()
@@ -30,7 +32,15 @@ func Main() {
 	mux.HandleFunc("/update", updateTodoHandler)
 	mux.HandleFunc("/delete", deleteTodoHandler)
 	mux.HandleFunc("/get", getTodoHandler)
-	http.ListenAndServe(":8080", mux)
+
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "traceID", uuid.New())
+	handler := util.CreateMiddleware(ctx, mux)
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: handler,
+	}
+	server.ListenAndServe()
 }
 
 func createTodoHandler(writer http.ResponseWriter, request *http.Request) {
