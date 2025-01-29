@@ -41,3 +41,5 @@ A to-do item should include a description and a status of "not started", "starte
 - curl -X POST -H "Content-Type: application/json" -d '{"id":1}' http://localhost:8080/delete
 4) get an item
 - curl -X POST -H "Content-Type: application/json" -d '{"id":1}' http://localhost:8080/get
+5) list all items
+- curl -X POST -H "Content-Type: application/json" http://localhost:8080/list
