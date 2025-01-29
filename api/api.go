@@ -23,8 +23,6 @@ type TodoItemId struct {
 
 var todoItems = []TodoItem{}
 
-var ctx context.Context
-
 func Main() {
 	loadTodosFromFile()
 	mux := http.NewServeMux()
