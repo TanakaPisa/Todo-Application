@@ -1,14 +1,14 @@
 package todo
 
 import (
+	"Todo-Application/util"
 	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"log/slog"
 	"os"
-	"time"
+	"github.com/google/uuid"
 )
 
 type TodoItem struct {
@@ -20,29 +20,18 @@ type TodoItem struct {
 var TodoItems = []TodoItem{}
 var fileName = "list.json"
 
-type contextKey string
-const traceIdKey contextKey = "traceID"
-
 func Main() {
-	// create context
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, traceIdKey, fmt.Sprintf("trace-%d", time.Now().UnixNano()))
-
-	// Use the log package to log errors and information to the console
-	traceIdVal, ok := ctx.Value(traceIdKey).(string)
-	if !ok {
-		traceIdVal = "unknown" 
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})).With("traceID", traceIdVal)
+	ctx = context.WithValue(ctx, "traceID", uuid.New())
 	
 	// - When the application starts, load all to-do items from disk before adding new item
 	_, err := os.Stat(fileName)
 	if errors.Is(err, os.ErrNotExist) {
 		// create file if doesn't exist
-		fmt.Println("Creating a new file!")
+		util.LogInfo(ctx, "Creating a new file!")
 		file, err := os.Create(fileName)
 		if err != nil {
-			logger.Error("Error creating file", slog.String("file", fileName), slog.Any("error", err))
+			util.LogError(ctx, "Error creating file", err)
 			return
 		}
 		defer file.Close()
@@ -51,7 +40,7 @@ func Main() {
 	// load file contents
 	content, err := os.ReadFile(fileName)
 	if err != nil {
-		logger.Error("Error reading file", slog.String("file", fileName), slog.Any("error", err))
+		util.LogError(ctx, "Error reading file", err)
 		return
 	}
 
@@ -72,7 +61,7 @@ func Main() {
 
 	var item = TodoItem{id, desc, status}
 	fmt.Println(item)
-
+	
 	//Operations
 	switch {
 	case action == "add":
@@ -88,11 +77,11 @@ func Main() {
 	// - After printing the list of to-do items, save them to a file on disk
 	jsonBytes, err := json.Marshal(TodoItems)
 	if err != nil {
-		logger.Error("Error marshalling json", slog.String("file", fileName), slog.Any("error", err))
+		util.LogError(ctx, "Error marshalling json", err)
 		return
 	}
 	os.WriteFile(fileName, jsonBytes, 0644)
-	logger.Info("File saved successfully", slog.String("file", fileName))
+	util.LogInfo(ctx, "File saved successfully")
 }
 
 func addItem(item TodoItem) {

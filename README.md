@@ -31,3 +31,13 @@ A to-do item should include a description and a status of "not started", "starte
 - go run main.go -action=update -id=1 -desc="new Item" -status="started"
 3) Remove item 
 - go run main.go -action=remove -id=0
+
+# API operations
+1) Add new item
+- curl -X POST -H "Content-Type: application/json" -d '{"id":1, "desc":"Buy bread", "status":"done"}' http://localhost:8080/create
+2) Update new item
+- curl -X POST -H "Content-Type: application/json" -d '{"id":1, "desc":"Buy bread", "status":"done"}' http://localhost:8080/update
+3) remove an item
+- curl -X POST -H "Content-Type: application/json" -d '{"id":1}' http://localhost:8080/delete
+4) get an item
+- curl -X POST -H "Content-Type: application/json" -d '{"id":1}' http://localhost:8080/get
