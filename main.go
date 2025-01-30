@@ -1,10 +1,11 @@
 package main
 
 import (
+	//"Todo-Application/api"
 	"Todo-Application/util"
+	"Todo-Application/web"
 	"context"
 	"github.com/google/uuid"
-	"Todo-Application/api"
 	//"Todo-Application/todo"
 	"fmt"
 	"os"
@@ -20,9 +21,11 @@ func main() {
 	signal.Notify(channel, os.Interrupt)
 
 	// Run todo operations
-	//todo.Main()
-	go api.Main()
-
+	// todo.Main()
+	// go api.Main()
+	//web.StaticPage()
+	web.DynamicPage()
+	
 	// Wait for a signal
 	done := make(chan bool, 1)
 	go func() {

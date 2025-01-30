@@ -30,7 +30,6 @@ func Main() {
 	mux.HandleFunc("/update", updateTodoHandler)
 	mux.HandleFunc("/delete", deleteTodoHandler)
 	mux.HandleFunc("/get", getTodoHandler)
-	mux.HandleFunc("/list", ListTodoHandler)
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "traceID", uuid.New())
@@ -145,19 +144,6 @@ func getTodoHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	http.Error(writer, "Todo Item not found", http.StatusNotFound)
-}
-
-func ListTodoHandler(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		http.Error(writer, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
-	for _, item := range todoItems {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusOK)
-		json.NewEncoder(writer).Encode(item)
-	}
 }
 
 func saveTodosToFile() {
