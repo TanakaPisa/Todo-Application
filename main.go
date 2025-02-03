@@ -1,9 +1,9 @@
 package main
 
 import (
-	//"Todo-Application/api"
+	"Todo-Application/api"
 	"Todo-Application/util"
-	"Todo-Application/web"
+	//"Todo-Application/web"
 	"context"
 	"github.com/google/uuid"
 	//"Todo-Application/todo"
@@ -22,9 +22,9 @@ func main() {
 
 	// Run todo operations
 	// todo.Main()
-	// go api.Main()
+	go api.Main()
 	//web.StaticPage()
-	web.DynamicPage()
+	//web.DynamicPage()
 	
 	// Wait for a signal
 	done := make(chan bool, 1)

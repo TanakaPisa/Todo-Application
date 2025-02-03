@@ -26,14 +26,12 @@ var todoItems = []TodoItem{}
 func Main() {
 	loadTodosFromFile()
 	mux := http.NewServeMux()
-	mux.HandleFunc("/create", createTodoHandler)
-	mux.HandleFunc("/update", updateTodoHandler)
-	mux.HandleFunc("/delete", deleteTodoHandler)
-	mux.HandleFunc("/get", getTodoHandler)
+	mux.HandleFunc("POST /create", createTodoHandler)
+	mux.HandleFunc("POST /update", updateTodoHandler)
+	mux.HandleFunc("POST /delete", deleteTodoHandler)
+	mux.HandleFunc("POST /get", getTodoHandler)
 
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "traceID", uuid.New())
-	handler := util.CreateMiddleware(ctx, mux)
+	handler := util.CreateMiddleware(mux)
 	server := &http.Server{
 		Addr:    ":8080",
 		Handler: handler,
@@ -42,21 +40,16 @@ func Main() {
 }
 
 func createTodoHandler(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		http.Error(writer, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var item TodoItem
 	err := json.NewDecoder(request.Body).Decode(&item)
 	if err != nil {
-		http.Error(writer, "Invalid JSON payload in create", http.StatusBadRequest)
+		util.LogError(request.Context(), "Invalid JSON payload in create", err)
 		return
 	}
 
 	item.ID = len(todoItems) + 1
 	todoItems = append(todoItems, item)
-	saveTodosToFile()
+	saveTodosToFile(request.Context())
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
@@ -64,15 +57,10 @@ func createTodoHandler(writer http.ResponseWriter, request *http.Request) {
 }
 
 func updateTodoHandler(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		http.Error(writer, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var updateItem TodoItem
 	err := json.NewDecoder(request.Body).Decode(&updateItem)
 	if err != nil {
-		http.Error(writer, "Invalid JSON Payload in update", http.StatusBadRequest)
+		util.LogError(request.Context(), "Invalid JSON Payload in update", err)
 		return
 	}
 
@@ -80,7 +68,7 @@ func updateTodoHandler(writer http.ResponseWriter, request *http.Request) {
 		if item.ID == updateItem.ID {
 			todoItems[i].Desc = updateItem.Desc
 			todoItems[i].Status = updateItem.Status
-			saveTodosToFile()
+			saveTodosToFile(request.Context())
 
 			writer.Header().Set("Content-Type", "application/json")
 			writer.WriteHeader(http.StatusOK)
@@ -88,21 +76,15 @@ func updateTodoHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 	}
-
-	http.Error(writer, "Todo Item not found", http.StatusNotFound)
+	util.LogError(request.Context(), "Todo Item not found", err)
 }
 
 func deleteTodoHandler(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		http.Error(writer, "Invalid request method in delete", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var removeItem TodoItemId
 	result := []TodoItem{}
 	err := json.NewDecoder(request.Body).Decode(&removeItem)
 	if err != nil {
-		http.Error(writer, "Invalid JSON Payload", http.StatusBadRequest)
+		util.LogError(request.Context(), "Invalid JSON Payload for delete", err)
 		return
 	}
 
@@ -118,19 +100,14 @@ func deleteTodoHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	todoItems = result
-	saveTodosToFile()
+	saveTodosToFile(request.Context())
 }
 
 func getTodoHandler(writer http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodPost {
-		http.Error(writer, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var getItem TodoItemId
 	err := json.NewDecoder(request.Body).Decode(&getItem)
 	if err != nil {
-		http.Error(writer, "Invalid JSON Payload in get", http.StatusBadRequest)
+		util.LogError(request.Context(), "Invalid JSON Payload in get", err)
 		return
 	}
 
@@ -142,14 +119,10 @@ func getTodoHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 	}
-
-	http.Error(writer, "Todo Item not found", http.StatusNotFound)
+	util.LogError(request.Context(), "Todo Item not found", err)
 }
 
-func saveTodosToFile() {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "traceID", uuid.New())
-	
+func saveTodosToFile(ctx context.Context) {
 	file, err := os.Create("list.json")
 	if err != nil {
 		util.LogError(ctx, "Error saving todos:", err)

@@ -7,22 +7,22 @@ import (
 	"os"
 )
 
-var Logger *slog.Logger
-
 func init() {
-	Logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
 }
 
 func LogInfo(ctx context.Context, message string) {
-	Logger.InfoContext(ctx, message, "traceID", ctx.Value("traceID"))
+	slog.InfoContext(ctx, message, "traceID", ctx.Value("traceID"))
 }
 
 func LogError(ctx context.Context, message string, err error) {
-	Logger.ErrorContext(ctx, message, "traceID", ctx.Value("traceID"), "error", err)
+	slog.ErrorContext(ctx, message, "traceID", ctx.Value("traceID"), "error", err)
 }
 
-func CreateMiddleware(ctx context.Context,next http.Handler) http.Handler {
+func CreateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
 		next.ServeHTTP(res, req.WithContext(ctx))
 	})
 }
