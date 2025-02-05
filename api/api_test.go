@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +12,7 @@ import (
 func makeRequest(item TodoItem) *httptest.ResponseRecorder {
 	// create items for test
 	reqBody, _ := json.Marshal(item)
-	req := httptest.NewRequest("POST", "/create", json.RawMessage(reqBody))
+	req := httptest.NewRequest("POST", "/create", bytes.NewBuffer(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	// Post
@@ -25,6 +26,8 @@ func makeRequest(item TodoItem) *httptest.ResponseRecorder {
 
 // Test two concurrent Create requests
 func TestCreate(t *testing.T) {
+	go todoManager()
+	
 	var wg sync.WaitGroup
 	wg.Add(2)
 
