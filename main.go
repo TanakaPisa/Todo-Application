@@ -21,11 +21,11 @@ func main() {
 	signal.Notify(channel, os.Interrupt)
 
 	// Run todo operations
-	// todo.Main()
 	go api.Main()
-	//web.StaticPage()
-	//web.DynamicPage()
-	
+	// todo.Main()
+	// web.StaticPage()
+	// web.DynamicPage()
+
 	// Wait for a signal
 	done := make(chan bool, 1)
 	go func() {

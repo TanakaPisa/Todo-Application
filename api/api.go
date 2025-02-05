@@ -4,10 +4,8 @@ import (
 	"Todo-Application/util"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
-
 	"github.com/google/uuid"
 )
 
@@ -20,11 +18,20 @@ type TodoItem struct {
 type TodoItemId struct {
 	ID int `json:"id"`
 }
-
-var todoItems = []TodoItem{}
+ 
+var (
+	todoItems = []TodoItem{}
+	createChan = make(chan TodoItem)
+	updateChan = make(chan TodoItem)
+	deleteChan = make(chan int)
+	getChan = make(chan int)
+	getResp = make(chan TodoItem)
+)
 
 func Main() {
 	loadTodosFromFile()
+	go todoManager()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /create", createTodoHandler)
 	mux.HandleFunc("POST /update", updateTodoHandler)
@@ -47,13 +54,8 @@ func createTodoHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	item.ID = len(todoItems) + 1
-	todoItems = append(todoItems, item)
-	saveTodosToFile(request.Context())
-
-	writer.Header().Set("Content-Type", "application/json")
+	createChan <- item
 	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(item)
 }
 
 func updateTodoHandler(writer http.ResponseWriter, request *http.Request) {
@@ -64,43 +66,20 @@ func updateTodoHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	for i, item := range todoItems {
-		if item.ID == updateItem.ID {
-			todoItems[i].Desc = updateItem.Desc
-			todoItems[i].Status = updateItem.Status
-			saveTodosToFile(request.Context())
-
-			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusOK)
-			json.NewEncoder(writer).Encode(updateItem)
-			return
-		}
-	}
-	util.LogError(request.Context(), "Todo Item not found", err)
+	updateChan <- updateItem
+	writer.WriteHeader(http.StatusOK)
 }
 
 func deleteTodoHandler(writer http.ResponseWriter, request *http.Request) {
 	var removeItem TodoItemId
-	result := []TodoItem{}
 	err := json.NewDecoder(request.Body).Decode(&removeItem)
 	if err != nil {
 		util.LogError(request.Context(), "Invalid JSON Payload for delete", err)
 		return
 	}
 
-	for _, item := range todoItems {
-		fmt.Println("item:", item.ID)
-		fmt.Println("item:", removeItem.ID)
-		if item.ID != removeItem.ID {
-			result = append(result, item)
-			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusOK)
-			json.NewEncoder(writer).Encode(item)
-		}
-	}
-
-	todoItems = result
-	saveTodosToFile(request.Context())
+	deleteChan <- removeItem.ID
+	writer.WriteHeader(http.StatusOK)
 }
 
 func getTodoHandler(writer http.ResponseWriter, request *http.Request) {
@@ -111,15 +90,55 @@ func getTodoHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	for _, item := range todoItems {
-		if item.ID == getItem.ID {
-			writer.Header().Set("Content-Type", "application/json")
-			writer.WriteHeader(http.StatusOK)
-			json.NewEncoder(writer).Encode(item)
-			return
-		}
+	getChan <- getItem.ID
+	item := <- getResp
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	json.NewEncoder(writer).Encode(item)
+
+	//util.LogError(request.Context(), "Todo not found", err)
+}
+
+func todoManager() {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "traceID", uuid.New())
+
+	for {
+		select {
+		case item := <- createChan:
+			item.ID = len(todoItems) + 1
+			todoItems = append(todoItems, TodoItem{ID: item.ID, Desc: item.Desc, Status: item.Status})
+			saveTodosToFile(ctx)
+		case update := <-updateChan:
+			for i, item := range todoItems {
+				if item.ID == update.ID {
+					todoItems[i].Desc = update.Desc
+					todoItems[i].Status = update.Status
+					saveTodosToFile(ctx)
+					break
+				}
+			}
+		case id := <-deleteChan:
+			var newItems []TodoItem
+			for _, item := range todoItems {
+				if item.ID != id {
+					newItems = append(newItems, item)
+				}
+			}
+			todoItems = newItems
+			saveTodosToFile(ctx)
+
+		case id := <-getChan:
+			var foundItem TodoItem
+			for _, item := range todoItems {
+				if item.ID == id {
+					foundItem = item
+					break
+				}
+			}
+			getResp <- foundItem
+		}		
 	}
-	util.LogError(request.Context(), "Todo Item not found", err)
 }
 
 func saveTodosToFile(ctx context.Context) {
@@ -131,7 +150,8 @@ func saveTodosToFile(ctx context.Context) {
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
-	if err := encoder.Encode(todoItems); err != nil {
+	err = encoder.Encode(todoItems)
+	if (err != nil) {
 		util.LogError(ctx, "Error encoding todos to file:", err)
 	}
 }
@@ -148,9 +168,4 @@ func loadTodosFromFile() {
 		return
 	}
 	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&todoItems); err != nil {
-		util.LogError(ctx,"Error decoding todos from file:", err)
-	}
 }
