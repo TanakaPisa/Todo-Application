@@ -13,8 +13,7 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "traceID", uuid.New())
+	ctx := context.WithValue(context.Background(), "traceID", uuid.New())
 	util.LogInfo(ctx, "Application started")
 	// Create a channel to receive OS signals
 	channel := make(chan os.Signal, 1)

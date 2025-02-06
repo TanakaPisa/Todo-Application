@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+
 	"github.com/google/uuid"
 )
 
@@ -18,14 +19,17 @@ type TodoItem struct {
 type TodoItemId struct {
 	ID int `json:"id"`
 }
- 
+
+type TodoRequest struct {
+	Action string   `json:"action"`
+	Item   TodoItem `json:"item"`
+	ID     int      `json:"id"`
+	Resp   chan TodoItem
+}
+
 var (
 	todoItems = []TodoItem{}
-	createChan = make(chan TodoItem)
-	updateChan = make(chan TodoItem)
-	deleteChan = make(chan int)
-	getChan = make(chan int)
-	getResp = make(chan TodoItem)
+	todoChan  = make(chan TodoRequest)
 )
 
 func Main() {
@@ -54,90 +58,89 @@ func createTodoHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	createChan <- item
+	todoChan <- TodoRequest{Action: "create", Item: item}
 	writer.WriteHeader(http.StatusCreated)
 }
 
 func updateTodoHandler(writer http.ResponseWriter, request *http.Request) {
-	var updateItem TodoItem
-	err := json.NewDecoder(request.Body).Decode(&updateItem)
+	var item TodoItem
+	err := json.NewDecoder(request.Body).Decode(&item)
 	if err != nil {
 		util.LogError(request.Context(), "Invalid JSON Payload in update", err)
 		return
 	}
 
-	updateChan <- updateItem
+	todoChan <- TodoRequest{Action: "update", Item: item}
 	writer.WriteHeader(http.StatusOK)
 }
 
 func deleteTodoHandler(writer http.ResponseWriter, request *http.Request) {
-	var removeItem TodoItemId
-	err := json.NewDecoder(request.Body).Decode(&removeItem)
+	var item TodoItemId
+	err := json.NewDecoder(request.Body).Decode(&item)
 	if err != nil {
 		util.LogError(request.Context(), "Invalid JSON Payload for delete", err)
 		return
 	}
 
-	deleteChan <- removeItem.ID
+	todoChan <- TodoRequest{Action: "delete", ID: item.ID}
 	writer.WriteHeader(http.StatusOK)
 }
 
 func getTodoHandler(writer http.ResponseWriter, request *http.Request) {
-	var getItem TodoItemId
-	err := json.NewDecoder(request.Body).Decode(&getItem)
+	var item TodoItemId
+	err := json.NewDecoder(request.Body).Decode(&item)
 	if err != nil {
 		util.LogError(request.Context(), "Invalid JSON Payload in get", err)
 		return
 	}
 
-	getChan <- getItem.ID
-	item := <- getResp
+	respChan := make(chan TodoItem)
+	todoChan <- TodoRequest{Action: "get", ID: item.ID, Resp: respChan}
+	foundItem := <-respChan
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
-	json.NewEncoder(writer).Encode(item)
-
-	//util.LogError(request.Context(), "Todo not found", err)
+	json.NewEncoder(writer).Encode(foundItem)
 }
 
 func todoManager() {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "traceID", uuid.New())
+	ctx := context.WithValue(context.Background(), "traceID", uuid.New())
 
-	for {
-		select {
-		case item := <- createChan:
-			item.ID = len(todoItems) + 1
-			todoItems = append(todoItems, TodoItem{ID: item.ID, Desc: item.Desc, Status: item.Status})
+	for req := range todoChan {
+		switch req.Action {
+		case "create":
+			req.Item.ID = len(todoItems) + 1
+			todoItems = append(todoItems, req.Item)
 			saveTodosToFile(ctx)
-		case update := <-updateChan:
+		case "update":
 			for i, item := range todoItems {
-				if item.ID == update.ID {
-					todoItems[i].Desc = update.Desc
-					todoItems[i].Status = update.Status
+				if item.ID == req.Item.ID {
+					todoItems[i].Desc = req.Item.Desc
+					todoItems[i].Status = req.Item.Status
 					saveTodosToFile(ctx)
 					break
 				}
 			}
-		case id := <-deleteChan:
+		case "delete":
 			var newItems []TodoItem
 			for _, item := range todoItems {
-				if item.ID != id {
+				if item.ID != req.ID {
 					newItems = append(newItems, item)
 				}
 			}
 			todoItems = newItems
 			saveTodosToFile(ctx)
-
-		case id := <-getChan:
+		case "get":
 			var foundItem TodoItem
 			for _, item := range todoItems {
-				if item.ID == id {
+				if item.ID == req.ID {
 					foundItem = item
 					break
 				}
 			}
-			getResp <- foundItem
-		}		
+			if req.Resp != nil {
+				req.Resp <- foundItem
+			}
+		}
 	}
 }
 
@@ -157,8 +160,7 @@ func saveTodosToFile(ctx context.Context) {
 }
 
 func loadTodosFromFile() {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "traceID", uuid.New())
+	ctx := context.WithValue(context.Background(), "traceID", uuid.New())
 
 	file, err := os.Open("list.json")
 	if err != nil {

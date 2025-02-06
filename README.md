@@ -36,10 +36,8 @@ A to-do item should include a description and a status of "not started", "starte
 1) Add new item
 - curl -X POST -H "Content-Type: application/json" -d '{"id":1, "desc":"Buy bread", "status":"done"}' http://localhost:8080/create
 2) Update new item
-- curl -X POST -H "Content-Type: application/json" -d '{"id":1, "desc":"Buy bread", "status":"done"}' http://localhost:8080/update
+- curl -X POST -H "Content-Type: application/json" -d '{"id":1, "desc":"Buy bread two times", "status":"done"}' http://localhost:8080/update
 3) remove an item
 - curl -X POST -H "Content-Type: application/json" -d '{"id":1}' http://localhost:8080/delete
 4) get an item
 - curl -X POST -H "Content-Type: application/json" -d '{"id":1}' http://localhost:8080/get
-5) list all items
-- curl -X POST -H "Content-Type: application/json" http://localhost:8080/list

@@ -53,5 +53,5 @@ func TestCreate(t *testing.T) {
 		}
 	}()
 
-	wg.Wait() // Wait for both Goroutines to finish
+	wg.Wait()
 }

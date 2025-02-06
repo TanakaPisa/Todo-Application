@@ -21,8 +21,7 @@ var TodoItems = []TodoItem{}
 var fileName = "list.json"
 
 func Main() {
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, "traceID", uuid.New())
+	ctx := context.WithValue(context.Background(), "traceID", uuid.New())
 	
 	// - When the application starts, load all to-do items from disk before adding new item
 	_, err := os.Stat(fileName)
