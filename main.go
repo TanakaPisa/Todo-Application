@@ -19,7 +19,7 @@ func main() {
 	channel := make(chan os.Signal, 1)
 	signal.Notify(channel, os.Interrupt)
 
-	// Run todo operations
+	// Run todo apps
 	go api.Main()
 	// todo.Main()
 	// web.StaticPage()

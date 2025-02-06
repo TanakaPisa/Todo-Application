@@ -1,6 +1,8 @@
 package api
 
 import (
+	"Todo-Application/concurrency"
+	"Todo-Application/util"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -9,7 +11,7 @@ import (
 	"testing"
 )
 
-func makeRequest(item TodoItem) *httptest.ResponseRecorder {
+func makeRequest(item util.TodoItem) *httptest.ResponseRecorder {
 	// create items for test
 	reqBody, _ := json.Marshal(item)
 	req := httptest.NewRequest("POST", "/create", bytes.NewBuffer(reqBody))
@@ -26,7 +28,7 @@ func makeRequest(item TodoItem) *httptest.ResponseRecorder {
 
 // Test two concurrent Create requests
 func TestCreate(t *testing.T) {
-	go todoManager()
+	concurrency.Main()
 	
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -34,7 +36,7 @@ func TestCreate(t *testing.T) {
 	// First todo item
 	go func() {
 		defer wg.Done()
-		item := TodoItem{ID: 1, Desc: "task1",Status: "pending"}
+		item := util.TodoItem{ID: 1, Desc: "task1",Status: "pending"}
 		rec := makeRequest(item)
 
 		if rec.Code != http.StatusCreated {
@@ -45,7 +47,7 @@ func TestCreate(t *testing.T) {
 	// Second todo item
 	go func() {
 		defer wg.Done()
-		item := TodoItem{ID: 2, Desc: "task2",Status: "pending"}
+		item := util.TodoItem{ID: 2, Desc: "task2",Status: "pending"}
 		rec := makeRequest(item)
 
 		if rec.Code != http.StatusCreated {

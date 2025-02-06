@@ -7,6 +7,23 @@ import (
 	"os"
 )
 
+type TodoItem struct {
+	ID     int    `json:"id"`
+	Desc   string `json:"desc"`
+	Status string `json:"status"`
+}
+
+type TodoItemId struct {
+	ID int `json:"id"`
+}
+
+type TodoRequest struct {
+	Action string   `json:"action"`
+	Item   TodoItem `json:"item"`
+	ID     int      `json:"id"`
+	Resp   chan TodoItem
+}
+
 func init() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
